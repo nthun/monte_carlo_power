@@ -31,7 +31,7 @@ library(broom.mixed) # standardized statistics output
 library(faux) # transforming distributions
 library(furrr) # parallel processing
 
-knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 theme_set(theme_light()) # Set plot theme
 ```
@@ -235,8 +235,7 @@ generate_dataset(n = 500,
 
 ```
 
-\#3.
-Calculating statistical power
+#3.Calculating statistical power
 
 ## Generating replications
 
@@ -566,7 +565,7 @@ lmer(rt ~ group * measurement + (1|id), data = study_long) %>%
 
 ```
 
-# Adding confounders
+## Adding confounders
 
 What if we want to add age? We can add variables that are correlated with other pre-existing variables. Age is a bit tricky, because it must be an integer, and it should be within reasonable boundaries. So after creating it, it must be adjusted.
 
@@ -599,14 +598,80 @@ Our hypothesis: Alcohol will increase the reaction time after drinking it, vs. d
 ```{r}
 # Create dataset creating function
 
-# Create parameter matrix 
+n = 100
+between = list(group = c("Placebo", "Alcohol"))
+within = list(measurement = c("Pre", "Post"))
+mus = list(Placebo = c(400, 405),
+           Alcohol = c(400, 410)) 
+sds = 10
+r = .5
+replications = 100
 
+generate_complex <- function(n, between, within, mu, sd, r){
+  sim_design(n = n,
+             between = between,
+             within = within,
+             mu = mus, 
+             sd = sds,
+             dv = "rt",
+             r = r, 
+             plot = FALSE) %>% 
+  mutate(age = rnorm_pre(x = Pre, mu = 50, sd = 20, r = .2) %>% 
+               norm2trunc(min = 18, max = 90) %>% 
+               round(0)) %>% 
+  wide2long() %>% 
+  mutate(measurement = fct_relevel(measurement, "Pre"),
+         group = fct_relevel(group, "Placebo"))
+}
+
+# Create parameter matrix 
 # Generate multiple datasets for each sample size
 
+study2_data <-
+  crossing(cell_size = seq(10, 100, 10),
+           sample = 1:replications) %>% 
+  mutate(data = map(cell_size, 
+                    ~generate_complex(.x, between, within, mus, sds, r)))
+
 # Evaluate the models
+study2_result <-
+  study2_data %>% 
+  mutate(
+         model = map(data, 
+                     ~lmer(rt ~ group * measurement + age + (1|id), data = .x) %>% 
+                       tidy()),
+         p = map_dbl(model, 
+                     ~filter(.x, term == "groupAlcohol:measurementPost") %>% 
+                      pull(p.value)),
+         sig = p <.05) %>% 
+  group_by(cell_size) %>% 
+  summarise(power = mean(sig))
 
 # Interpolate between values to find exact required sample size
+study2_power <-
+  tibble(cell_size = 10:100) %>% 
+  left_join(study2_result, by = "cell_size") %>% 
+  mutate(power = approx(x = cell_size,
+                        y = power,
+                        xout = cell_size)$y)
+
+study2_power %>% 
+  filter(power >= .8)
+
+# Visualize results
+study2_power %>% 
+  ggplot() +
+  aes(x = cell_size, y = power) +
+  geom_line(alpha = .7, size = 1.2) +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent_format()) +
+  geom_hline(yintercept = .8, lty = "dashed", color = "red") +
+  labs(x = "Cell size",
+       title = "Statistical power as a function of sample size")
+
 
 ```
 
-
+Answer: Statistical power is reached when we have 58 participants / cell
+which is 232 participants altogether.
+Please mind that this estimation can be made more accurate with increasing the
+number of replications (e.g. to 10,000).
