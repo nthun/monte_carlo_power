@@ -530,7 +530,7 @@ See exercises.
 
 The only problem with `sim_design()` is that it can only simulate normally distributed variables.
 However, it has functions to convert between normal and other distributions (e.g. binomial, Likert).
-See: <https://debruine.github.io/faux/articles/distributions.html> o generally we can first generate the datasets with normal variables, and transform the variables into differently distributed variables.
+See: <https://debruine.github.io/faux/articles/distributions.html> so generally we can first generate the datasets with normal variables, and transform the variables into differently distributed variables.
 
 Let's try a more complex study design!
 
@@ -597,6 +597,7 @@ Our hypothesis: Alcohol will increase the reaction time after drinking it, vs. d
 
 ```{r}
 # Create dataset creating function
+set.seed(2021)
 
 n = 100
 between = list(group = c("Placebo", "Alcohol"))
@@ -655,8 +656,16 @@ study2_power <-
                         y = power,
                         xout = cell_size)$y)
 
+
 study2_power %>% 
   filter(power >= .8)
+
+required_n <-
+  study2_power %>% 
+  filter(power >= .8) %>% 
+  summarise(first(cell_size)) %>% 
+  pull()
+
 
 # Visualize results
 study2_power %>% 
@@ -665,13 +674,15 @@ study2_power %>%
   geom_line(alpha = .7, size = 1.2) +
   scale_y_continuous(limits = c(0, 1), labels = scales::percent_format()) +
   geom_hline(yintercept = .8, lty = "dashed", color = "red") +
+  geom_vline(xintercept = required_n, lty = "dashed", color = "red") +
+  geom_text(aes(label = required_n), x = required_n, y = .78, hjust = 0) +
   labs(x = "Cell size",
        title = "Statistical power as a function of sample size")
 
 
 ```
 
-Answer: Statistical power is reached when we have 58 participants / cell
-which is 232 participants altogether.
+**Answer**: Statistical power is reached when we have `r required_n` participants / cell (condition)
+which is `r required_n*2` participants altogether.
 Please mind that this estimation can be made more accurate with increasing the
 number of replications (e.g. to 10,000).
