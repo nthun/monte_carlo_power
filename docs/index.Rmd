@@ -235,7 +235,7 @@ generate_dataset(n = 500,
 
 ```
 
-#3.Calculating statistical power
+# 3.Calculating statistical power
 
 ## Generating replications
 
@@ -295,7 +295,7 @@ If we increase it over 200, then we hit 80% power.
 But how much participants we need exactly?
 Let's run the simulation for multiple sample sizes.
 
-#3. Calculate power for different sample sizes
+# 4. Calculate power for different sample sizes
 
 To be able to create replications for each scenario that we test, we need to define the sample sizes, and also the number of repliactions for each sample size.
 The more datasets we have for each sample size, the more reliable our estimation gets.
@@ -415,7 +415,7 @@ multiple_power %>%
 
 ```
 
-# 4. Improving performance
+# 5. Improving performance
 
 You may see that every time we regenerate the data, the line looks a bit differently.
 This is because of the randomness.
@@ -521,7 +521,7 @@ multiple_power %>%
 
 ```
 
-#5. Complex designs
+#6. Complex designs
 
 At this point, we may want to abandon our own dataset generating function, because we learned how it works, and how to write one.
 Instead, I recommend using the `sim_design()` function from the `{faux}` package, that can generate datasets for complex designs.
